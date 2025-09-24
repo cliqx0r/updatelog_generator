@@ -15,10 +15,9 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.spinner import Spinner
 from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
+from kivy.uix.popup import Popup
 
-import sqlite3
-
-connection = ""
+from db_handler import init_db, get_versions, get_categorys, add_category, add_version, add_entry
 
 ### Font-Sizes:
 headline_1 = 20
@@ -32,6 +31,8 @@ labels_height = 40
 main_window_height = int(screenheight) - header_height - buttons_height
 
 class UpdatelogGenerator(App):
+
+    init_db()
     
     def build(self):
 
@@ -66,16 +67,15 @@ class UpdatelogGenerator(App):
         tab1_version_selector = Spinner(text="Select Version",
                                         size_hint=(1,None),
                                         height=labels_height,
-                                        values=("5.2.0.6366", "5.3.0.6366", "5.2.0.34366", "None")  #TODO: get values from Versions Tabel of DB
-            )
+                                        values= get_versions() + ["New Version"])
 
         ##### deactivates the textinput and "add" button until "None" is selected #####
         tab1_version_selector.bind(
-            text=lambda spinner, value: self.on_spinner_select(spinner, value, "None", tab1_version_textfield)
+            text=lambda spinner, value: self.on_spinner_select(spinner, value, "New Version", tab1_version_textfield)
         )
         
         tab1_version_selector.bind(
-            text=lambda spinner, value: self.on_spinner_select(spinner, value, "None", tab1_add_version_button)
+            text=lambda spinner, value: self.on_spinner_select(spinner, value, "New Version", tab1_add_version_button)
         )
 
         #TODO: select latest added version-number automatically after adding to database / implement adding textinput value to database Version Tabel
@@ -85,12 +85,20 @@ class UpdatelogGenerator(App):
                                            text="new Version-number",
                                            disabled = True)
         
+        tab1_version_textfield.bind(focus=self.on_focus_clear_textinput)
+        
+        
         tab1_add_version_button = Button(text="Add",
                                          size_hint=(1,None),
                                          height=40,
-                                         disabled = True
+                                         disabled = True,
                                          )
-
+        
+        tab1_add_version_button.bind(on_release= lambda instance: ((add_version(tab1_version_textfield.text)),
+                                                                    (setattr(tab1_version_selector, "values", get_versions() + ["New Version"])),
+                                                                    (setattr(tab1_version_selector, "text", get_versions()[(len(get_versions()) - 1)]))
+                                                                    )) 
+        
         tab1_version.add_widget(tab1_version_selector)
         tab1_version.add_widget(tab1_version_textfield)
         tab1_version.add_widget(tab1_add_version_button)
@@ -109,18 +117,17 @@ class UpdatelogGenerator(App):
                                   width= screenwidth)
 
         tab1_category_selector =Spinner(text="Select Category",
-                                        values=("General", "Homag", "Biesse", "None"),
+                                        values= get_categorys() + ["New Category"],
                                         size_hint=(1,None),
-                                        height=40
-                                        )
+                                        height=40)
         #deactivate textinput and add button until "None" is selected
 
         tab1_category_selector.bind(
-            text=lambda spinner, value: self.on_spinner_select(spinner, value, "None", tab1_category_textfield)
+            text=lambda spinner, value: self.on_spinner_select(spinner, value, "New Category", tab1_category_textfield)
         )
         
         tab1_category_selector.bind(
-            text=lambda spinner, value: self.on_spinner_select(spinner, value, "None" ,tab1_add_category_button)
+            text=lambda spinner, value: self.on_spinner_select(spinner, value, "New Category" ,tab1_add_category_button)
         )
 
         tab1_category_textfield = TextInput(multiline=False,
@@ -129,11 +136,19 @@ class UpdatelogGenerator(App):
                                            text="new Category",
                                            disabled = True)
         
+        tab1_category_textfield.bind(focus=self.on_focus_clear_textinput)
+
+        
         tab1_add_category_button = Button(text="Add",
                                          size_hint=(1,None),
                                          height=40,
                                          disabled = True
                                          )
+
+        tab1_add_category_button.bind(on_release= lambda instance: ((add_category(tab1_category_textfield.text)),
+                                                                    (setattr(tab1_category_selector, "values", get_categorys() + ["New Category"])),
+                                                                    (setattr(tab1_category_selector, "text", get_categorys()[(len(get_categorys()) - 1)]))
+                                                                    )) 
         
         tab1_category.add_widget(tab1_category_selector)
         tab1_category.add_widget(tab1_category_textfield)
@@ -141,17 +156,20 @@ class UpdatelogGenerator(App):
 
         tab1_main.add_widget(tab1_category)
 
-        tab1_main.add_widget(Label(text="Language",
+        tab1_language_label = Label(text="Language of Updatetext",
                                    font_size = headline_1,
                                    size_hint=(None,None),
                                    height = labels_height,
-                                   ))
+                                   )
         
-        tab1_main.add_widget(Spinner(text="Select Language",
+        tab1_language_selector = Spinner(text="Select Language",
                                      values=("German", "English"),
                                      size_hint_y= None,
                                      height = buttons_height
-                                    ))
+                                    )
+        
+        tab1_main.add_widget(tab1_language_label)
+        tab1_main.add_widget(tab1_language_selector)
 
         tab1_update_text = BoxLayout(orientation = "vertical")
 
@@ -163,20 +181,42 @@ class UpdatelogGenerator(App):
         
         tab1_updatetex_textfield = TextInput(multiline=True)
         
-        tab1_update_text.add_widget(tab1_updatetex_textfield)
         tab1_update_text.add_widget(tab1_updatetext_label)
+        tab1_update_text.add_widget(tab1_updatetex_textfield)
 
         tab1_main.add_widget(tab1_update_text)
 
         tab1_layout.add_widget(tab1_main)
         
+        succcess_popup = Popup(title="Success",
+                               title_size = headline_1,
+                               content = Label(text= "Entry successfully added",
+                                               font_size = headline_2),
+                               size_hint =(None,None),
+                               size=(300,150))
+
+        
+
         tab1_layout.add_widget(Button(text="Submit",
                                       size_hint= (1, None),
                                       height = buttons_height,
-                                      on_release = lambda instance: self.button_press(instance, tab1_updatetex_textfield.text)))    
+                                      on_release = lambda instance: (add_entry(tab1_version_selector.text, 
+                                                                              tab1_category_selector.text,
+                                                                              tab1_updatetex_textfield.text,
+                                                                              tab1_language_selector.text
+                                                                              ), succcess_popup.open() ))) 
+        ## TODO:check if text has value then call function add entry if not show error popup, that not all information were filled
+         
 
         tab1.add_widget(tab1_layout)
         main_window.add_widget(tab1)
+        ### Logic and Database handling
+
+        def addNewVersionNumber(version):
+            version
+
+     
+
 
         # Tab 2
         tab2 = TabbedPanelItem(text="Overview")
@@ -226,7 +266,10 @@ class UpdatelogGenerator(App):
 
         return layout_main
 
-
+# clear textinput on select
+    def on_focus_clear_textinput(self, instance, value):
+        if value:  # True, wenn TextInput den Fokus bekommt
+            instance.text = ""  # Text leeren
 
 #Function to disable a widget unti a specifiv value is selected 
     def on_spinner_select(self, spinner, value, expected_value ,disable_widget):
@@ -239,13 +282,6 @@ class UpdatelogGenerator(App):
             # Eingabe deaktivieren
             disable_widget.disabled = True
             disable_widget.disabled = True
-
-    def button_press(self, button, value):
-        if value:
-            print(value)
-        else:
-            pass
-
 
 if __name__ == '__main__':
     UpdatelogGenerator().run()
