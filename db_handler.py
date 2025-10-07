@@ -75,7 +75,6 @@ def get_categorys():
 
     for row in rows:
         categorys_list.append(row[1])
-
     return categorys_list
 
 
@@ -100,12 +99,12 @@ def get_entrys():
 
     for row in rows:
         entrys_list.append(row[1])
-
     return entrys_list
 
-def add_entry(version, category, entry_text, language):
+def add_entry(version, category, update_text, language):
+
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""INSERT INTO entrys (version, category, entry_text, language, creationdate) VALUES (?, ?, ?, ?, ?)""", (version, category, entry_text, language, time_now))
+    cursor.execute("""INSERT INTO entrys (version, category, entry_text, language, creationdate) VALUES (?, ?, ?, ?, ?)""", (version, category, update_text, language, time_now))
     conn.commit()
     conn.close()

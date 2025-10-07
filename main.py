@@ -93,7 +93,7 @@ class UpdatelogGenerator(App):
                                          height=40,
                                          disabled = True,
                                          )
-        
+                
         tab1_add_version_button.bind(on_release= lambda instance: ((add_version(tab1_version_textfield.text)),
                                                                     (setattr(tab1_version_selector, "values", get_versions() + ["New Version"])),
                                                                     (setattr(tab1_version_selector, "text", get_versions()[(len(get_versions()) - 1)]))
@@ -188,26 +188,43 @@ class UpdatelogGenerator(App):
 
         tab1_layout.add_widget(tab1_main)
         
-        succcess_popup = Popup(title="Success",
+        success_popup = Popup(title="Success",
                                title_size = headline_1,
                                content = Label(text= "Entry successfully added",
                                                font_size = headline_2),
                                size_hint =(None,None),
                                size=(300,150))
 
+        def version_selector():
+            version = tab1_version_selector.text
+
+            if version == "New Version":
+                version = tab1_version_textfield.text 
+            else:
+                version = tab1_version_selector.text
+            return version
         
+        def category_selector():
+            category = tab1_category_selector.text
+
+            if category == "New Category":
+                category = tab1_category_textfield.text
+            else:
+                category = tab1_category_selector.text
+            return category
+
 
         tab1_layout.add_widget(Button(text="Submit",
                                       size_hint= (1, None),
                                       height = buttons_height,
-                                      on_release = lambda instance: (add_entry(tab1_version_selector.text, 
-                                                                              tab1_category_selector.text,
-                                                                              tab1_updatetex_textfield.text,
-                                                                              tab1_language_selector.text
-                                                                              ), succcess_popup.open() ))) 
+                                      on_release = lambda instance: (add_entry(version = version_selector(), 
+                                                                              category = category_selector(),
+                                                                              update_text = tab1_updatetex_textfield.text,
+                                                                              language = tab1_language_selector.text
+                                                                              ), success_popup.open() ))) 
+        
         ## TODO:check if text has value then call function add entry if not show error popup, that not all information were filled
-         
-
+        
         tab1.add_widget(tab1_layout)
         main_window.add_widget(tab1)
         ### Logic and Database handling
